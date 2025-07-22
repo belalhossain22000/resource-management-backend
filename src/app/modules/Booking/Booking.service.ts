@@ -5,8 +5,10 @@ import ApiError from "../../../errors/ApiErrors";
 import httpStatus from "http-status";
 import {
   checkBookingConflicts,
+  getBookingStatus,
   validateBookingDuration,
 } from "../../../utils/bookingUtils";
+import { BookingWithStatus } from "./Booking.interface";
 
 const createBooking = async (payload: Booking) => {
   const { resourceId, startTime, endTime, requestedBy } = payload;
@@ -72,9 +74,61 @@ const createBooking = async (payload: Booking) => {
 };
 
 //get all bookings
-const getAllBookings = async () => {
-  const result = await prisma.booking.findMany();
-  return result;
+const getAllBookings = async (payload: any) => {
+  const { resource, date } = payload;
+  const whereClause: any = {};
+
+  if (resource) {
+    whereClause.resourceId = resource;
+  }
+
+  if (date) {
+    const searchDate = new Date(date as string);
+    if (isNaN(searchDate.getTime())) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid date format");
+    }
+
+    const startOfDay = new Date(searchDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(searchDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    whereClause.startTime = {
+      gte: startOfDay,
+      lte: endOfDay,
+    };
+  }
+
+  const bookings = await prisma.booking.findMany({
+    where: whereClause,
+    include: {
+      resource: true,
+    },
+    orderBy: [{ startTime: "asc" }],
+  });
+
+  const bookingsWithStatus: BookingWithStatus[] = bookings.map((booking) => ({
+    ...booking,
+    status: getBookingStatus(
+      new Date(booking.startTime),
+      new Date(booking.endTime)
+    ),
+  }));
+
+  const groupedBookings = bookingsWithStatus.reduce((acc, booking) => {
+    const resourceName = booking.resource.name;
+    if (!acc[resourceName]) {
+      acc[resourceName] = [];
+    }
+    acc[resourceName].push(booking);
+    return acc;
+  }, {} as Record<string, BookingWithStatus[]>);
+
+  return {
+    bookings: bookingsWithStatus,
+    groupedBookings,
+  };
 };
 
 //get single booking
@@ -131,11 +185,10 @@ const deleteBooking = async (id: string) => {
   return result;
 };
 
-
 export const BookingService = {
   createBooking,
   getAllBookings,
   getBookingById,
   updateBooking,
-  deleteBooking
+  deleteBooking,
 };
