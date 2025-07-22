@@ -6,6 +6,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 model User {
   id           String     @id @default(uuid())
   firstName    String
@@ -23,27 +24,33 @@ model User {
 }
 
 model Resource {
-  id       String     @id @default(uuid())
+  id       String    @id @default(uuid())
   name     String    @unique
   bookings Booking[]
-  
+
   @@map("resources")
 }
 
 model Booking {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   resourceId  String
   startTime   DateTime
   endTime     DateTime
   requestedBy String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  status      BookingStatus @default(upcoming)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  
+
   @@map("bookings")
 }
 
+enum BookingStatus {
+  upcoming
+  ongoing
+  past
+}
 
 enum UserRole {
   ADMIN
