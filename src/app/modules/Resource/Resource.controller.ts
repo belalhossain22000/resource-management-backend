@@ -4,6 +4,8 @@ import catchAsync from "../../../shared/catchAsync";
 import sendResponse from "../../../shared/sendResponse";
 import { Request, Response } from "express";
 import { ResourceService } from "./Resource.service";
+import pick from "../../../shared/pick";
+import { ResourceFilterableFields } from "./Resource.constant";
 
 // Controller for creating a resource
 const createResource = catchAsync(async (req: Request, res: Response) => {
@@ -18,7 +20,9 @@ const createResource = catchAsync(async (req: Request, res: Response) => {
 
 //get all resources
 const getAllResources = catchAsync(async (req: Request, res: Response) => {
-  const result = await ResourceService.getAllResources();
+  const filters = pick(req.query, ResourceFilterableFields);
+  const options = pick(req.query, ["limit", "page", "sortBy", "sortOrder"]);
+  const result = await ResourceService.getAllResources(filters, options);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

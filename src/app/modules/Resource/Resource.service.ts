@@ -1,8 +1,11 @@
-import { Resource } from "@prisma/client";
+import { Prisma, Resource } from "@prisma/client";
 import prisma from "../../../shared/prisma";
 import ApiError from "../../../errors/ApiErrors";
 import httpStatus from "http-status";
 import { findAvailableSlots } from "../../../utils/bookingUtils";
+import { IPaginationOptions } from "../../../interfaces/paginations";
+import { paginationHelper } from "../../../helpars/paginationHelper";
+import { ResourceSearchAbleFields } from "./Resource.constant";
 
 // Resource.service: Module file for the Resource.service functionality.
 const createResource = async (payload: Resource) => {
@@ -22,9 +25,60 @@ const createResource = async (payload: Resource) => {
 };
 
 //get all resources
-const getAllResources = async () => {
-  const result = await prisma.resource.findMany();
-  return result;
+const getAllResources = async (params: any, options: IPaginationOptions) => {
+  const { page, limit, skip } = paginationHelper.calculatePagination(options);
+  const { searchTerm, ...filterData } = params;
+  const andConditions: Prisma.ResourceWhereInput[] = [];
+
+  if (params.searchTerm) {
+    andConditions.push({
+      OR: ResourceSearchAbleFields.map((field) => ({
+        [field]: {
+          contains: params.searchTerm,
+          mode: "insensitive",
+        },
+      })),
+    });
+  }
+
+  if (Object.keys(filterData).length > 0) {
+    andConditions.push({
+      AND: Object.keys(filterData).map((key) => ({
+        [key]: {
+          equals: (filterData as any)[key],
+        },
+      })),
+    });
+  }
+
+  const whereConditions: Prisma.ResourceWhereInput = { AND: andConditions };
+
+  const result = await prisma.resource.findMany({
+    where: whereConditions,
+    orderBy:
+      options.sortBy && options.sortOrder
+        ? {
+            [options.sortBy]: options.sortOrder,
+          }
+        : {
+            createdAt: "desc",
+          },
+    skip,
+    take: Number(limit) || 10,
+  });
+
+  const total = await prisma.resource.count({
+    where: whereConditions,
+  });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: result,
+  };
 };
 
 //get resource by id
