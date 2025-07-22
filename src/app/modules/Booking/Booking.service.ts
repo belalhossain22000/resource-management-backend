@@ -71,6 +71,71 @@ const createBooking = async (payload: Booking) => {
   return result;
 };
 
+//get all bookings
+const getAllBookings = async () => {
+  const result = await prisma.booking.findMany();
+  return result;
+};
+
+//get single booking
+const getBookingById = async (id: string) => {
+  const result = await prisma.booking.findUnique({
+    where: {
+      id: id,
+    },
+  });
+  if (!result) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
+  }
+  return result;
+};
+
+//update booking
+const updateBooking = async (id: string, payload: Booking) => {
+  if (payload.resourceId) {
+    const resource = await prisma.resource.findUnique({
+      where: {
+        id: payload.resourceId,
+      },
+    });
+    if (!resource) {
+      throw new ApiError(httpStatus.NOT_FOUND, "Resource not found");
+    }
+  }
+
+  const booking = await getBookingById(id);
+  if (!booking) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
+  }
+
+  const result = await prisma.booking.update({
+    where: {
+      id: id,
+    },
+    data: payload,
+  });
+  return result;
+};
+
+//delete booking
+const deleteBooking = async (id: string) => {
+  const booking = await getBookingById(id);
+  if (!booking) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
+  }
+  const result = await prisma.booking.delete({
+    where: {
+      id: id,
+    },
+  });
+  return result;
+};
+
+
 export const BookingService = {
   createBooking,
+  getAllBookings,
+  getBookingById,
+  updateBooking,
+  deleteBooking
 };

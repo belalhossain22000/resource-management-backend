@@ -13,4 +13,20 @@ router.post(
     BookingController.createBooking
 );
 
+// Get all bookings route (GET)
+router.get("/", BookingController.getAllBookings);
+
+// Get booking by ID route (GET)
+router.get("/:id", BookingController.getBookingById);
+
+// Update booking route (PUT)
+router.put(
+    "/update/:id",
+    validateRequest(BookingValidation.updateBookingSchema),
+    BookingController.updateBooking
+);
+
+// Delete booking route (DELETE)
+router.delete("/delete/:id", BookingController.deleteBooking);
+
 export const BookingRoutes = router;
