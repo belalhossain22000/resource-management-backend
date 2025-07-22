@@ -13,6 +13,9 @@ router.post(
     ResourceController.createResource
 );
 
+//resource availability
+router.post("/availability", ResourceController.resourceAvailability);
+
 // Get all resources route (GET)
 router.get("/", ResourceController.getAllResources);
 
