@@ -13,6 +13,9 @@ router.post(
     BookingController.createBooking
 );
 
+//getBookingStats
+router.get("/stats", BookingController.getBookingStats);
+
 // Get all bookings route (GET)
 router.get("/", BookingController.getAllBookings);
 

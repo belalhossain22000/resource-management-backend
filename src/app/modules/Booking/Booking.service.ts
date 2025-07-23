@@ -216,10 +216,52 @@ const deleteBooking = async (id: string) => {
   return result;
 };
 
+// get booking stats
+const getBookingStats = async () => {
+  const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(now);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const [totalBookings, totalResources, totalBookingsToday, ongoingBookingsToday] = await Promise.all([
+    prisma.booking.count(),
+    prisma.resource.count(),
+    prisma.booking.count({
+      where: {
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    }),
+    prisma.booking.count({
+      where: {
+        startTime: {
+          lte: now,
+        },
+        endTime: {
+          gte: now,
+        },
+        status: "ongoing",
+      },
+    }),
+  ]);
+
+  return {
+    totalBookings,
+    totalResources,
+    totalBookingsToday,
+    ongoingBookingsToday,
+  };
+};
+
 export const BookingService = {
   createBooking,
   getAllBookings,
   getBookingById,
   updateBooking,
   deleteBooking,
+  getBookingStats
 };

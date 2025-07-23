@@ -64,10 +64,22 @@ const deleteBooking = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//getBookingStats
+const getBookingStats = catchAsync(async (req: Request, res: Response) => {
+  const result = await BookingService.getBookingStats();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Booking stats retrieve successfully!",
+    data: result,
+  });
+});
+
 export const BookingController = {
   createBooking,
   getAllBookings,
   getBookingById,
   updateBooking,
   deleteBooking,
+  getBookingStats
 };
