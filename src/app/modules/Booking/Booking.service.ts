@@ -11,7 +11,6 @@ import {
 import { BookingWithStatus } from "./Booking.interface";
 
 const createBooking = async (payload: Booking) => {
- 
   const { resourceId, startTime, endTime, requestedBy } = payload;
 
   // Validate required fields
@@ -117,8 +116,6 @@ const getAllBookings = async (payload: any) => {
       where: whereClause,
       include: { resource: true },
       orderBy: { startTime: "asc" },
-      skip,
-      take,
     }),
     prisma.booking.count({ where: whereClause }),
   ]);
@@ -140,16 +137,7 @@ const getAllBookings = async (payload: any) => {
     return acc;
   }, {} as Record<string, BookingWithStatus[]>);
 
-  return {
-    meta: {
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(total / limit),
-    },
-
-    data: groupedBookings,
-  };
+  return groupedBookings;
 };
 
 //get single booking
