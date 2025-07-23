@@ -74,9 +74,10 @@ const createBooking = async (payload: Booking) => {
   return result;
 };
 
-//get all bookings
+//!get all bookings
 const getAllBookings = async (payload: any) => {
-  const { resource, date } = payload;
+  const { resource, date, page = 1, limit = 10, searchTerm } = payload;
+
   const whereClause: any = {};
 
   if (resource) {
@@ -101,13 +102,26 @@ const getAllBookings = async (payload: any) => {
     };
   }
 
-  const bookings = await prisma.booking.findMany({
-    where: whereClause,
-    include: {
-      resource: true,
-    },
-    orderBy: [{ startTime: "asc" }],
-  });
+  if (searchTerm) {
+    whereClause.requestedBy = {
+      contains: searchTerm,
+      mode: "insensitive",
+    };
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const take = Number(limit);
+
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
+      where: whereClause,
+      include: { resource: true },
+      orderBy: { startTime: "asc" },
+      skip,
+      take,
+    }),
+    prisma.booking.count({ where: whereClause }),
+  ]);
 
   const bookingsWithStatus: BookingWithStatus[] = bookings.map((booking) => ({
     ...booking,
@@ -117,7 +131,25 @@ const getAllBookings = async (payload: any) => {
     ),
   }));
 
-  return bookingsWithStatus;
+  const groupedBookings = bookingsWithStatus.reduce((acc, booking) => {
+    const resourceName = booking.resource.name;
+    if (!acc[resourceName]) {
+      acc[resourceName] = [];
+    }
+    acc[resourceName].push(booking);
+    return acc;
+  }, {} as Record<string, BookingWithStatus[]>);
+
+  return {
+    meta: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+    },
+
+    data: groupedBookings,
+  };
 };
 
 //get single booking

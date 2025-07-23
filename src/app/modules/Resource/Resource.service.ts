@@ -189,8 +189,8 @@ const resourceAvailability = async (payload: any) => {
 
   return {
     totalSlots: availableSlots.length,
-    resource,
-    date: searchDate.toISOString().split("T")[0],
+    // resource,
+    // date: searchDate.toISOString().split("T")[0],
     availableSlots,
   };
 };
