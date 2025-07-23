@@ -11,7 +11,7 @@ import {
 import { BookingWithStatus } from "./Booking.interface";
 
 const createBooking = async (payload: Booking) => {
-  console.log(payload);
+ 
   const { resourceId, startTime, endTime, requestedBy } = payload;
 
   // Validate required fields
