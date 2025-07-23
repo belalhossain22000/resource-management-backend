@@ -18,7 +18,8 @@ const createBooking = catchAsync(async (req: Request, res: Response) => {
 
 //get all booking
 const getAllBookings = catchAsync(async (req: Request, res: Response) => {
-  const result = await BookingService.getAllBookings();
+  const query = req.query;
+  const result = await BookingService.getAllBookings(query);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -68,5 +69,5 @@ export const BookingController = {
   getAllBookings,
   getBookingById,
   updateBooking,
-  deleteBooking
+  deleteBooking,
 };
