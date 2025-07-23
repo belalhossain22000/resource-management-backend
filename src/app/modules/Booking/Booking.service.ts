@@ -257,12 +257,12 @@ const getBookingStats = async () => {
     }),
     prisma.booking.count({
       where: {
-        startTime: {
-          lte: now,
-        },
-        endTime: {
-          gte: now,
-        },
+        // startTime: {
+        //   lte: now,
+        // },
+        // endTime: {
+        //   gte: now,
+        // },
         status: "ongoing",
       },
     }),
@@ -297,8 +297,8 @@ const getUpcomingAndActiveBookings = async () => {
     prisma.booking.findMany({
       where: {
         status: "ongoing",
-        startTime: { lte: now },
-        endTime: { gte: now },
+        // startTime: { lte: now },
+        // endTime: { gte: now },
       },
       orderBy: {
         startTime: "asc",
