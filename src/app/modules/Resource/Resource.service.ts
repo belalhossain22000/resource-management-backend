@@ -65,6 +65,9 @@ const getAllResources = async (params: any, options: IPaginationOptions) => {
           },
     skip,
     take: Number(limit) || 10,
+    include: {
+      bookings: true,
+    },
   });
 
   const total = await prisma.resource.count({

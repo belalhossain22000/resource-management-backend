@@ -24,12 +24,12 @@ router.get("/:id", ResourceController.getResourceById);
 
 // Update resource route (PUT)
 router.put(
-    "/update/:id",
+    "/:id",
     validateRequest(ResourceValidation.updateResourceSchema),
     ResourceController.updateResource
 );
 
 // Delete resource route (DELETE)
-router.delete("/delete/:id", ResourceController.deleteResource);
+router.delete("/:id", ResourceController.deleteResource);
 
 export const ResourceRoutes = router;
