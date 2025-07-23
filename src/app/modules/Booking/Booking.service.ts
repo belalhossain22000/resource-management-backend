@@ -11,6 +11,7 @@ import {
 import { BookingWithStatus } from "./Booking.interface";
 
 const createBooking = async (payload: Booking) => {
+  console.log(payload);
   const { resourceId, startTime, endTime, requestedBy } = payload;
 
   // Validate required fields
@@ -116,19 +117,7 @@ const getAllBookings = async (payload: any) => {
     ),
   }));
 
-  const groupedBookings = bookingsWithStatus.reduce((acc, booking) => {
-    const resourceName = booking.resource.name;
-    if (!acc[resourceName]) {
-      acc[resourceName] = [];
-    }
-    acc[resourceName].push(booking);
-    return acc;
-  }, {} as Record<string, BookingWithStatus[]>);
-
-  return {
-    bookings: bookingsWithStatus,
-    groupedBookings,
-  };
+  return bookingsWithStatus;
 };
 
 //get single booking
