@@ -24,11 +24,11 @@ model User {
 }
 
 model Resource {
-  id       String    @id @default(uuid())
-  name     String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   bookings Booking[]
 
   @@map("resources")
@@ -53,6 +53,7 @@ enum BookingStatus {
   upcoming
   ongoing
   past
+  cancelled
 }
 
 enum UserRole {

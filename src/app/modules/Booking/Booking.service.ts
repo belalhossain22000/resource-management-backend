@@ -1,5 +1,5 @@
 // Booking.service: Module file for the Booking.service functionality.
-import { Booking } from "@prisma/client";
+import { Booking, BookingStatus } from "@prisma/client";
 import prisma from "../../../shared/prisma";
 import ApiError from "../../../errors/ApiErrors";
 import httpStatus from "http-status";
@@ -137,6 +137,9 @@ const getBookingById = async (id: string) => {
     where: {
       id: id,
     },
+    include: {
+      resource: true,
+    },
   });
   if (!result) {
     throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
@@ -162,14 +165,42 @@ const updateBooking = async (id: string, payload: Booking) => {
     throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
   }
 
-  const result = await prisma.booking.update({
-    where: {
-      id: id,
-    },
-    data: payload,
+  // Ensure only status is being updated
+  if (!payload.status || Object.keys(payload).length > 1) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Only status update is allowed");
+  }
+
+  const statusOrder: BookingStatus[] = ["upcoming", "ongoing", "past"];
+  const currentIndex = statusOrder.indexOf(booking.status);
+  const newIndex = statusOrder.indexOf(payload.status);
+
+  // Allow "cancelled" from any state
+  if (payload.status === "cancelled") {
+    return await prisma.booking.update({
+      where: { id },
+      data: { status: "cancelled" },
+    });
+  }
+
+  // Block invalid or out-of-sequence transitions
+  if (newIndex === -1) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid status");
+  }
+
+  if (newIndex <= currentIndex) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Cannot revert or repeat the same status");
+  }
+
+  if (newIndex !== currentIndex + 1) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Status must be updated sequentially");
+  }
+
+  return await prisma.booking.update({
+    where: { id },
+    data: { status: payload.status },
   });
-  return result;
 };
+
 
 //delete booking
 const deleteBooking = async (id: string) => {

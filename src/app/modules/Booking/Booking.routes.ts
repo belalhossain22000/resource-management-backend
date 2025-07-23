@@ -21,12 +21,12 @@ router.get("/:id", BookingController.getBookingById);
 
 // Update booking route (PUT)
 router.put(
-    "/update/:id",
+    "/:id",
     validateRequest(BookingValidation.updateBookingSchema),
     BookingController.updateBooking
 );
 
 // Delete booking route (DELETE)
-router.delete("/delete/:id", BookingController.deleteBooking);
+router.delete("/:id", BookingController.deleteBooking);
 
 export const BookingRoutes = router;

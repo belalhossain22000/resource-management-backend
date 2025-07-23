@@ -23,7 +23,7 @@ export interface GetBookingsQuery {
   date?: string // YYYY-MM-DD format
 }
 
-export type BookingStatus = 'upcoming' | 'ongoing' | 'past'
+export type BookingStatus = 'upcoming' | 'ongoing' | 'past' |"cancelled"
 
 export interface BookingWithStatus extends BookingWithResource {
   status: BookingStatus
