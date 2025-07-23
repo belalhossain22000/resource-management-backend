@@ -16,6 +16,9 @@ router.post(
 //getBookingStats
 router.get("/stats", BookingController.getBookingStats);
 
+//getUpcomingAndActiveBookings
+router.get("/upcoming-ongoing", BookingController.getUpcomingAndActiveBookings);
+
 // Get all bookings route (GET)
 router.get("/", BookingController.getAllBookings);
 

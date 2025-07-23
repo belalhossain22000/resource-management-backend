@@ -75,11 +75,23 @@ const getBookingStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+//getUpcomingAndActiveBookings
+  const getUpcomingAndActiveBookings = catchAsync(async (req: Request, res: Response) => {
+    const result = await BookingService.getUpcomingAndActiveBookings();
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Upcoming and active bookings retrieve successfully!",
+      data: result,
+    });
+  })
+
 export const BookingController = {
   createBooking,
   getAllBookings,
   getBookingById,
   updateBooking,
   deleteBooking,
-  getBookingStats
+  getBookingStats,
+  getUpcomingAndActiveBookings
 };

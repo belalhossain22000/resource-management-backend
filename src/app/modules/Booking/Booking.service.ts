@@ -188,11 +188,17 @@ const updateBooking = async (id: string, payload: Booking) => {
   }
 
   if (newIndex <= currentIndex) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Cannot revert or repeat the same status");
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Cannot revert or repeat the same status"
+    );
   }
 
   if (newIndex !== currentIndex + 1) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Status must be updated sequentially");
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Status must be updated sequentially"
+    );
   }
 
   return await prisma.booking.update({
@@ -200,7 +206,6 @@ const updateBooking = async (id: string, payload: Booking) => {
     data: { status: payload.status },
   });
 };
-
 
 //delete booking
 const deleteBooking = async (id: string) => {
@@ -225,7 +230,12 @@ const getBookingStats = async () => {
   const endOfDay = new Date(now);
   endOfDay.setUTCHours(23, 59, 59, 999);
 
-  const [totalBookings, totalResources, totalBookingsToday, ongoingBookingsToday] = await Promise.all([
+  const [
+    totalBookings,
+    totalResources,
+    totalBookingsToday,
+    ongoingBookingsToday,
+  ] = await Promise.all([
     prisma.booking.count(),
     prisma.resource.count(),
     prisma.booking.count({
@@ -257,11 +267,51 @@ const getBookingStats = async () => {
   };
 };
 
+//getUpcomingAndActiveBookings
+
+const getUpcomingAndActiveBookings = async () => {
+  const now = new Date();
+
+  const [upcomingBookings, activeBookings] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        status: "upcoming",
+      },
+      orderBy: {
+        startTime: "asc",
+      },
+      include: {
+        resource: true,
+      },
+    }),
+
+    prisma.booking.findMany({
+      where: {
+        status: "ongoing",
+        startTime: { lte: now },
+        endTime: { gte: now },
+      },
+      orderBy: {
+        startTime: "asc",
+      },
+      include: {
+        resource: true,
+      },
+    }),
+  ]);
+
+  return {
+    upcomingBookings,
+    activeBookings,
+  };
+};
+
 export const BookingService = {
   createBooking,
   getAllBookings,
   getBookingById,
   updateBooking,
   deleteBooking,
-  getBookingStats
+  getBookingStats,
+  getUpcomingAndActiveBookings,
 };
