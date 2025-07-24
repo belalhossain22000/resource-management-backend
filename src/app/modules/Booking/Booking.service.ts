@@ -8,7 +8,8 @@ import {
   getBookingStatus,
   validateBookingDuration,
 } from "../../../utils/bookingUtils";
-import { BookingWithStatus } from "./Booking.interface";
+import { BookingStatusUpdate, BookingWithStatus } from "./Booking.interface";
+import cron from 'node-cron'
 
 const createBooking = async (payload: Booking) => {
   const { resourceId, startTime, endTime, requestedBy } = payload;
@@ -108,10 +109,9 @@ const getAllBookings = async (payload: any) => {
     };
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
-  const take = Number(limit);
 
-  const [bookings, total] = await Promise.all([
+
+  const [bookings] = await Promise.all([
     prisma.booking.findMany({
       where: whereClause,
       include: { resource: true },
@@ -279,7 +279,6 @@ const getBookingStats = async () => {
 //getUpcomingAndActiveBookings
 
 const getUpcomingAndActiveBookings = async () => {
-  const now = new Date();
 
   const [upcomingBookings, activeBookings] = await Promise.all([
     prisma.booking.findMany({
@@ -314,6 +313,268 @@ const getUpcomingAndActiveBookings = async () => {
     activeBookings,
   };
 };
+
+// Get booking status based on current time vs booking time
+const getStatusByTime = (startTime: Date, endTime: Date): BookingStatus => {
+  const now = new Date()
+  
+  if (now < startTime) {
+    return BookingStatus.upcoming
+  } else if (now >= startTime && now <= endTime) {
+    return BookingStatus.ongoing
+  } else {
+    return BookingStatus.past
+  }
+}
+
+//Determine if status should be updated based on business rules
+const shouldUpdateStatus = (currentStatus: BookingStatus, timeBasedStatus: BookingStatus): boolean => {
+  // Never update cancelled bookings
+  if (currentStatus === BookingStatus.cancelled) {
+    return false
+  }
+
+  // Allow natural progression: upcoming → ongoing → past
+  switch (currentStatus) {
+    case BookingStatus.upcoming:
+      return timeBasedStatus === BookingStatus.ongoing || timeBasedStatus === BookingStatus.past
+    
+    case BookingStatus.ongoing:
+      return timeBasedStatus === BookingStatus.past
+    
+    case BookingStatus.past:
+      return false // Past bookings don't change automatically
+    
+    default:
+      return false
+  }
+}
+
+ const updateBookingStatuses = async (): Promise<BookingStatusUpdate[]> => {
+  const updates: BookingStatusUpdate[] = []
+
+  try {
+    console.log('Starting automatic booking status update...')
+
+    // Get all bookings that are not cancelled
+    const bookings = await prisma.booking.findMany({
+      where: {
+        status: {
+          not: BookingStatus.cancelled
+        }
+      },
+      include: {
+        resource: true
+      }
+    })
+
+    console.log(`Found ${bookings.length} non-cancelled bookings to check`)
+
+    for (const booking of bookings) {
+      const currentDbStatus = booking.status
+      const timeBasedStatus = getStatusByTime(
+        new Date(booking.startTime),
+        new Date(booking.endTime)
+      )
+
+      // Only update if the time-based status is different and update is allowed
+      if (currentDbStatus !== timeBasedStatus && shouldUpdateStatus(currentDbStatus, timeBasedStatus)) {
+        try {
+          await prisma.booking.update({
+            where: { id: booking.id },
+            data: {
+              status: timeBasedStatus,
+              updatedAt: new Date()
+            }
+          })
+
+          updates.push({
+            id: booking.id,
+            oldStatus: currentDbStatus,
+            newStatus: timeBasedStatus,
+            reason: `Time-based update: ${currentDbStatus} → ${timeBasedStatus}`
+          })
+
+          console.log(
+            `Updated booking ${booking.id} (${booking.resource.name}): ${currentDbStatus} → ${timeBasedStatus}`
+          )
+        } catch (error) {
+          console.error(`Failed to update booking ${booking.id}:`, error)
+        }
+      }
+    }
+
+    console.log(`Completed booking status update. Updated ${updates.length} bookings`)
+    return updates
+
+  } catch (error) {
+    console.error('Error during booking status update:', error)
+    throw error
+  }
+}
+
+
+ //Update overdue bookings (upcoming bookings that should have started)
+ 
+ const updateOverdueBookings = async (): Promise<BookingStatusUpdate[]> => {
+  const updates: BookingStatusUpdate[] = []
+  const now = new Date()
+
+  try {
+    // Find upcoming bookings where start time has passed
+    const overdueBookings = await prisma.booking.findMany({
+      where: {
+        status: BookingStatus.upcoming,
+        startTime: {
+          lt: now
+        }
+      },
+      include: {
+        resource: true
+      }
+    })
+
+    console.log(`Found ${overdueBookings.length} overdue bookings`)
+
+    for (const booking of overdueBookings) {
+      const timeBasedStatus = getStatusByTime(
+        new Date(booking.startTime),
+        new Date(booking.endTime)
+      )
+
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: timeBasedStatus,
+          updatedAt: new Date()
+        }
+      })
+
+      updates.push({
+        id: booking.id,
+        oldStatus: BookingStatus.upcoming,
+        newStatus: timeBasedStatus,
+        reason: `Overdue booking update`
+      })
+
+      console.log(
+        `Updated overdue booking ${booking.id} (${booking.resource.name}): upcoming → ${timeBasedStatus}`
+      )
+    }
+
+    return updates
+  } catch (error) {
+    console.error('Error updating overdue bookings:', error)
+    throw error
+  }
+}
+
+
+const updateExpiredBookings = async (): Promise<BookingStatusUpdate[]> => {
+  const updates: BookingStatusUpdate[] = []
+  const now = new Date()
+
+  try {
+    // Find ongoing bookings where end time has passed
+    const expiredBookings = await prisma.booking.findMany({
+      where: {
+        status: BookingStatus.ongoing,
+        endTime: {
+          lt: now
+        }
+      },
+      include: {
+        resource: true
+      }
+    })
+
+    console.log(`Found ${expiredBookings.length} expired bookings`)
+
+    for (const booking of expiredBookings) {
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: BookingStatus.past,
+          updatedAt: new Date()
+        }
+      })
+
+      updates.push({
+        id: booking.id,
+        oldStatus: BookingStatus.ongoing,
+        newStatus: BookingStatus.past,
+        reason: `Expired booking update`
+      })
+
+      console.log(
+        `Updated expired booking ${booking.id} (${booking.resource.name}): ongoing → past`
+      )
+    }
+
+    return updates
+  } catch (error) {
+    console.error('Error updating expired bookings:', error)
+    throw error
+  }
+}
+
+
+ //Start cron jobs for automatic booking status updates
+
+export const startBookingCronJobs = () => {
+  console.log('Starting booking status cron jobs...')
+
+  // Run every minute to check for status updates
+  cron.schedule('* * * * *', async () => {
+    try {
+      await updateBookingStatuses()
+    } catch (error) {
+      console.error('Cron job error (status update):', error)
+    }
+  }, {
+    name: 'booking-status-update',
+    timezone: 'UTC'
+  })
+
+  // Run every 5 minutes for overdue bookings
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await updateOverdueBookings()
+    } catch (error) {
+      console.error('Cron job error (overdue bookings):', error)
+    }
+  }, {
+    name: 'overdue-bookings-update',
+    timezone: 'UTC'
+  })
+
+  // Run every 10 minutes for expired bookings
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      await updateExpiredBookings()
+    } catch (error) {
+      console.error('Cron job error (expired bookings):', error)
+    }
+  }, {
+    name: 'expired-bookings-update',
+    timezone: 'UTC'
+  })
+
+  // Daily stats logging at midnight
+  cron.schedule('0 0 * * *', async () => {
+    try {
+      const stats = await getBookingStats()
+      console.log('Daily booking stats:', stats)
+    } catch (error) {
+      console.error('Daily stats cron job error:', error)
+    }
+  }, {
+    name: 'daily-booking-stats',
+    timezone: 'UTC'
+  })
+
+  console.log('All booking status cron jobs started successfully')
+}
 
 export const BookingService = {
   createBooking,

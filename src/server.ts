@@ -1,8 +1,8 @@
 import { Server } from "http";
 import config from "./config";
 
-
 import app from "./app";
+import { startBookingCronJobs } from "./app/modules/Booking/Booking.service";
 
 let server: Server;
 
@@ -14,6 +14,11 @@ async function startServer() {
 
 async function main() {
   await startServer();
+
+  // Start cron jobs when server starts
+  startBookingCronJobs();
+
+  
   const exitHandler = () => {
     if (server) {
       server.close(() => {
@@ -23,7 +28,6 @@ async function main() {
       process.exit(1);
     }
   };
-
 
   process.on("uncaughtException", (error) => {
     console.log("Uncaught Exception: ", error);

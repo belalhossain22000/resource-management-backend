@@ -34,3 +34,10 @@ export interface AvailableSlot {
   end: Date
   duration: number // in minutes
 }
+
+export interface BookingStatusUpdate {
+  id: string
+  oldStatus: BookingStatus
+  newStatus: BookingStatus
+  reason: string
+}
