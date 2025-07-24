@@ -2,6 +2,10 @@
 
 A full-stack resource booking system with conflict detection and buffer time logic built with Next.js, Prisma, and SQLite.
 
+## Live link: https://resource-management-backend.vercel.app
+
+## Postman Documentation: https://documenter.getpostman.com/view/27386605/2sB34oBcLo
+
 ## Features
 
 - 📅 **Resource Booking**: Book time slots for shared resources (rooms, devices, etc.)
@@ -23,8 +27,8 @@ If Resource A is booked from **2:00 PM** to **3:00 PM**, the system blocks 10 mi
 ## Tech Stack
 
 - **Frontend**: Next.js 14 (App Router), Tailwind CSS, TypeScript
-- **Backend**: Next.js API Routes
-- **Database**: SQLite with Prisma ORM
+- **Backend**:Express js  , Typescript,
+- **Database**: Postgresql with Prisma ORM
 - **Icons**: Lucide React
 
 ## Quick Start
