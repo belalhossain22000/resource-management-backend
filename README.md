@@ -8,6 +8,7 @@ A full-stack resource booking system with conflict detection and buffer time log
 
 ## Features
 
+- 🤖 Auto Status Updates: Automated booking status updates using cron jobs
 - 📅 **Resource Booking**: Book time slots for shared resources (rooms, devices, etc.)
 - ⚡ **Conflict Detection**: Prevents overlapping bookings with 10-minute buffer time
 - 🔍 **Smart Validation**: Minimum 15-minute bookings, maximum 2-hour duration
